@@ -1,0 +1,25 @@
+# Environment variables
+.env
+.env.local
+
+# Node modules (if you add any dependencies later)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files
+test-*.js
+test-*.mjs
+list-models.js
