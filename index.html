@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>AI Resume Analyzer</h1>
+        <p class="subtitle">Upload your resume and get instant AI-powered feedback on ATS compatibility, skill gaps, and role fit!</p>
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Click to upload or drag and drop</div>
+            <div class="upload-subtext">PDF, JPG, PNG (MAX. 10MB)</div>
+            <input type="file" id="fileInput" accept=".pdf, .jpg, .jpeg, .png">
+        </div>
+        <div class="file-info" id="fileInfo"></div>
+        <div class="job-description">
+            <label for="jobDesc">Job Description (Optional)</label>
+            <textarea id="jobDesc" placeholder="Paste the job description here to get a tailored analysis..."></textarea>
+        </div>
+        <button class="analyze-btn" id="analyzeBtn" disabled>Analyze Resume</button>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing your resume with AI...</p>
+        </div>
+        <div class="error" id="error"></div>
+        <div class="results" id="results"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
