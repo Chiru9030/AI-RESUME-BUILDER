@@ -1,183 +1,56 @@
-# AI Resume Analyzer
+# AI Resume Analyzer 🚀
 
-A powerful, single-file AI-powered tool to analyze resumes against job descriptions.
+A powerful, AI-driven tool to analyze resumes against job descriptions, providing ATS compatibility scores, skill gap analysis, and actionable recommendations.
 
-## Features
-- **Instant Analysis**: Get ATS compatibility scores, skill gap analysis, and recommendations.
-- **Mock Mode**: Works out-of-the-box without an API key for demonstration.
-- **Single File**: Entire application contained in `server.js`.
-- **Privacy Focused**: Runs locally on your machine.
+## ✨ Features
 
-## Quick Start
+-   **AI-Powered Analysis**: Uses Google's Gemini 1.5 Flash (or Pro) model for deep, critical analysis.
+-   **ATS Scoring**: Provides a strict, realistic ATS compatibility score based on keywords, formatting, and metrics.
+-   **Skill Gap Detection**: Identifies missing skills crucial for the target role.
+-   **Smart Recommendations**: Offers concrete steps to improve your resume's impact.
+-   **Local Mock Mode**: Works even without an API key (simulated analysis) for testing.
+-   **Secure**: Your API key is used only for the session and not stored permanently.
 
-1. **Install Node.js** (if not already installed).
-2. **Run the Application**:
-   ```bash
-   node server.js
-   ```
-3. **Open Browser**:
-   Navigate to `http://localhost:8080`.
+## �️ Tech Stack
 
-## Configuration (Optional)
+-   **Frontend**: HTML5, CSS3, Vanilla JavaScript
+-   **Backend**: Node.js (Native HTTP module)
+-   **AI Integration**: Google Gemini API
 
-To use real AI analysis instead of Mock Mode:
+## � Getting Started
 
-1. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-2. Run with your key:
-   ```bash
-   export GEMINI_API_KEY=your_api_key_here
-   node server.js
-   ```
+### Prerequisites
 
-## Requirements
-- Node.js 18+
+-   Node.js installed on your machine.
+-   A Google Gemini API Key (Get one from [Google AI Studio](https://aistudio.google.com/)).
 
-## 📁 Project Structure
+### Installation
 
-```
-ai-resume-analyzer/
-├── index.html      # Complete web application (HTML + CSS + JS)
-├── server.js       # Node.js backend server
-├── .env            # API key configuration (create this)
-├── .gitignore      # Git ignore file
-└── README.md       # This file
-```
+1.  Clone the repository (or download the files).
+2.  Navigate to the project directory:
+    ```bash
+    cd AI_RESUME_BUILDER
+    ```
+3.  Install dependencies (if any - currently zero dependencies for the core server, but `pdf.js` and `tesseract.js` are loaded via CDN).
 
-## 🔧 Configuration
+### Running the Application
 
-### Environment Variables
+1.  **Start the Server**:
+    The project comes pre-configured with a **Demo API Key** for instant testing. You can simply run:
+    ```bash
+    node server.js
+    ```
+    *Note: For production use, please set your own `GEMINI_API_KEY` environment variable.*
 
-Create a `.env` file in the project root:
+2.  **Open in Browser**:
+    Visit `http://localhost:8080`
 
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-PORT=8080  # Optional, defaults to 8080
-```
+3.  **Analyze**:
+    -   Upload your Resume (PDF or Image).
+    -   (Optional) Paste the Job Description.
+    -   Click **Analyze Resume**.
 
-### Getting a Gemini API Key
+## ⚠️ Security Note
 
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the key and add it to your `.env` file
-
-## 💻 Usage
-
-1. **Start the server**
-   ```bash
-   node server.js
-   ```
-
-2. **Upload your resume**
-   - Open http://localhost:8080
-   - Click or drag-and-drop your PDF resume
-   - Optionally add a job description for tailored analysis
-
-3. **Get instant feedback**
-   - ATS compatibility score
-   - Skill gap analysis
-   - Strengths and recommendations
-
-## 🎨 Features in Detail
-
-### PDF Text Extraction
-- Uses PDF.js library for client-side PDF parsing
-- Supports multi-page PDFs
-- Maximum file size: 10MB
-
-### AI Analysis
-- Powered by Google Gemini 2.5 Flash model
-- Analyzes resume structure and content
-- Compares against job descriptions (optional)
-- Provides actionable feedback
-
-### Modern UI
-- Gradient backgrounds
-- Smooth animations
-- Responsive design
-- Drag-and-drop support
-
-## 🛠️ Technical Stack
-
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Backend**: Node.js (built-in HTTP module)
-- **PDF Processing**: PDF.js (CDN)
-- **AI**: Google Gemini API
-- **Dependencies**: Zero npm packages required!
-
-## 📝 API Endpoints
-
-### `POST /api/analyze`
-
-Analyzes a resume and returns feedback.
-
-**Request Body:**
-```json
-{
-  "resumeText": "string",
-  "jobDescription": "string (optional)"
-}
-```
-
-**Response:**
-```json
-{
-  "analysis": {
-    "atsScore": 85,
-    "summary": "...",
-    "skillGaps": "...",
-    "strengths": "...",
-    "recommendations": "..."
-  }
-}
-```
-
-## 🚀 Deployment
-
-### Deploy to Heroku
-
-```bash
-# Install Heroku CLI
-heroku create your-app-name
-heroku config:set GEMINI_API_KEY=your_key_here
-git push heroku main
-```
-
-### Deploy to Vercel
-
-```bash
-# Install Vercel CLI
-vercel
-# Add GEMINI_API_KEY in Vercel dashboard
-```
-
-### Deploy to Railway
-
-```bash
-# Connect your GitHub repo to Railway
-# Add GEMINI_API_KEY environment variable
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Google Gemini AI for the powerful language model
-- PDF.js for client-side PDF processing
-- The open-source community
-
-## 📧 Contact
-
-Made with ❤️ by CHIRANJEEVI.M
+> [!WARNING]
+> This repository includes a **public demo API key** for ease of use. If you fork this project for production, **please replace it with your own secure key** and use environment variables. The demo key may be rate-limited or revoked at any time.
