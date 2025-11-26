@@ -132,3 +132,4 @@ function showError(message) {
     error.textContent = '⚠️ ' + message;
     error.classList.add('active');
 }
+
