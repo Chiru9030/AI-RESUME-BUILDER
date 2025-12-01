@@ -1,261 +1,101 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import express from "express";
+import fs from "fs";
+import path from "path";
+import dotenv from "dotenv";
+import cors from "cors";
 
+dotenv.config();
+const app = express();
+const __dirname = path.resolve();
 const PORT = process.env.PORT || 8080;
 
-function getApiKey() {
-    // WARNING: This API key is hardcoded for DEMO purposes only.
-    // In a production environment, NEVER commit your API key to version control.
-    // Use environment variables instead.
-    const key = process.env.GEMINI_API_KEY || 'AIzaSyBZcCtp4Bvkvost3S5Z4t5TH2iqv7VL_Jc';
-    if (!key || key === 'your_api_key_here') {
-        console.log('ℹ️  No GEMINI_API_KEY environment variable found. Using Mock Mode.');
-        return null;
-    }
-    return key;
-}
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: "15mb" }));
+app.use(express.static("."));
 
-const server = http.createServer(async (req, res) => {
-    // CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Rate Limit (Prevent spam/abuse)
+let requestCount = 0;
+setInterval(() => (requestCount = 0), 60000); // reset every 1 min
 
-    if (req.method === 'OPTIONS') {
-        res.writeHead(200);
-        res.end();
-        return;
-    }
+// ----- AI RESUME ANALYSIS ENDPOINT -----
+app.post("/api/analyze", async (req, res) => {
+    requestCount++;
+    if (requestCount > 60) return res.json({ error: "Rate limit exceeded" });
 
-    // Serve Static Files
-    if (req.method === 'GET') {
-        let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
-        const extname = path.extname(filePath);
-        let contentType = 'text/html';
+    const { resumeText, jobDescription } = req.body;
+    if (!resumeText) return res.status(400).json({ error: "Resume text required" });
 
-        switch (extname) {
-            case '.js': contentType = 'text/javascript'; break;
-            case '.css': contentType = 'text/css'; break;
-            case '.json': contentType = 'application/json'; break;
-            case '.png': contentType = 'image/png'; break;
-            case '.jpg': contentType = 'image/jpg'; break;
+    const API_KEY = process.env.GEMINI_API_KEY;
+
+    // 🔥 LOCAL ATS SCORING ENGINE
+    function localATS(text, JD) {
+        let keywords = ["React", "Node", "Python", "Java", "AWS", "MongoDB", "Leadership", "Docker"];
+        const found = keywords.filter(k => new RegExp(k, "i").test(text));
+
+        const atsScore = 60 + found.length * 3;
+        let jdMatch = 0;
+
+        if (JD) {
+            const JDwords = JD.split(/\W+/);
+            JDwords.forEach(w => { if (text.includes(w)) jdMatch++; });
         }
 
-        fs.readFile(filePath, (err, content) => {
-            if (err) {
-                if (err.code === 'ENOENT') {
-                    res.writeHead(404);
-                    res.end('File Not Found');
-                } else {
-                    res.writeHead(500);
-                    res.end(`Server Error: ${err.code}`);
-                }
-            } else {
-                res.writeHead(200, { 'Content-Type': contentType });
-                res.end(content, 'utf-8');
-            }
-        });
-        return;
+        return {
+            atsScore: Math.min(atsScore, 90),
+            summary: "Resume reviewed. Strong skill presence detected, structured profile.",
+            strengths: found.slice(0, 4).join(", ") || "No strong highlights detected",
+            skillGaps: "Missing cloud, Kubernetes exposure",
+            jobFit: JD ? `${Math.round((jdMatch / JD.split(/\W+/).length) * 100)}%` : "N/A",
+            recommendations: "Add quantified achievements + project impact metrics."
+        };
     }
 
-    // API Endpoint
-    if (req.url === '/api/analyze' && req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', async () => {
-            try {
-                const { resumeText, jobDescription } = JSON.parse(body);
-                if (!resumeText) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Resume text is required' }));
-                    return;
-                }
+    // If no key → run offline mode
+    if (!API_KEY) return res.json({ analysis: localATS(resumeText, jobDescription) });
 
-                const apiKey = getApiKey();
-
-                // Enhanced Mock Mode: Local Analysis Logic
-                const analyzeLocal = (text) => {
-                    const keywords = {
-                        languages: ['Javascript', 'Python', 'Java', 'C++', 'TypeScript', 'Go', 'Rust', 'PHP', 'Ruby', 'Swift'],
-                        frontend: ['React', 'Angular', 'Vue', 'HTML', 'CSS', 'Redux', 'Webpack', 'Tailwind'],
-                        backend: ['Node.js', 'Express', 'Django', 'Flask', 'Spring', 'Laravel', 'PostgreSQL', 'MongoDB', 'SQL'],
-                        cloud: ['AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Jenkins', 'CI/CD'],
-                        softSkills: ['Leadership', 'Communication', 'Agile', 'Scrum', 'Project Management', 'Teamwork']
-                    };
-
-                    const escapeRegExp = (string) => {
-                        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    };
-
-                    const foundSkills = {
-                        languages: keywords.languages.filter(k => new RegExp(escapeRegExp(k), 'i').test(text)),
-                        frontend: keywords.frontend.filter(k => new RegExp(escapeRegExp(k), 'i').test(text)),
-                        backend: keywords.backend.filter(k => new RegExp(escapeRegExp(k), 'i').test(text)),
-                        cloud: keywords.cloud.filter(k => new RegExp(escapeRegExp(k), 'i').test(text)),
-                        softSkills: keywords.softSkills.filter(k => new RegExp(escapeRegExp(k), 'i').test(text))
-                    };
-
-                    const allFound = [...foundSkills.languages, ...foundSkills.frontend, ...foundSkills.backend, ...foundSkills.cloud, ...foundSkills.softSkills];
-
-                    // Calculate a pseudo-score based on keyword density and variety
-                    const scoreBase = 70;
-                    const varietyBonus = (Object.values(foundSkills).filter(cat => cat.length > 0).length) * 5;
-                    const countBonus = Math.min(allFound.length * 2, 15);
-                    const atsScore = Math.min(scoreBase + varietyBonus + countBonus, 98);
-
-                    // Generate Summary
-                    let summary = "The candidate presents a solid profile";
-                    if (foundSkills.languages.length > 2) summary += ` with strong versatility in programming languages (${foundSkills.languages.slice(0, 3).join(', ')}).`;
-                    else if (foundSkills.frontend.length > 0) summary += ` focused on frontend development technologies.`;
-                    else if (foundSkills.backend.length > 0) summary += ` with a focus on backend systems.`;
-                    else summary += ".";
-
-                    summary += " The resume is well-structured, though adding more quantifiable metrics could enhance impact.";
-
-                    // Generate Strengths
-                    const strengths = [];
-                    if (foundSkills.cloud.length > 0) strengths.push("Modern cloud & DevOps competency");
-                    if (foundSkills.softSkills.length > 0) strengths.push("Highlighted soft skills and leadership potential");
-                    if (allFound.length > 5) strengths.push("Diverse technical skill set");
-                    if (strengths.length === 0) strengths.push("Clear professional history", "Education credentials visible");
-
-                    // Generate Gaps (Inverse of what's found)
-                    const gaps = [];
-                    if (foundSkills.cloud.length === 0) gaps.push("Cloud platforms (AWS/Azure)");
-                    if (foundSkills.backend.length === 0 && foundSkills.frontend.length > 0) gaps.push("Backend integration knowledge");
-                    if (foundSkills.frontend.length === 0 && foundSkills.backend.length > 0) gaps.push("Modern frontend frameworks");
-                    if (gaps.length === 0) gaps.push("Advanced system architecture certifications");
-
-                    return {
-                        atsScore: atsScore,
-                        summary: summary,
-                        skillGaps: gaps.join(", "),
-                        strengths: strengths.join(", "),
-                        recommendations: "Quantify achievements with specific numbers (e.g., 'improved performance by 20%'). Ensure all dates are consistent. Tailor the summary to specific job descriptions."
-                    };
-                };
-
-                // If no API key or if API fails, use local analysis
-                if (!apiKey) {
-                    console.log('ℹ️  Running in Local Analysis Mode (No API Key)');
-                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing time
-                    try {
-                        const analysis = analyzeLocal(resumeText);
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ analysis }));
-                    } catch (localError) {
-                        console.error('Local Analysis Error:', localError);
-                        if (!res.headersSent) {
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ error: 'Local analysis failed' }));
-                        }
-                    }
-                    return;
-                }
-
-                const prompt = `You are an expert technical recruiter and ATS (Applicant Tracking System) specialist with high standards. Your goal is to provide a brutally honest and critical analysis of the following resume. Do not be polite; be accurate and constructive.
-
-Resume Content:
-${resumeText}
-
-${jobDescription ? `Job Description:\n${jobDescription}\n` : ''}
-
-Analyze the resume based on the following criteria:
-1.  **ATS Compatibility**: Check for formatting issues, keyword optimization, and readability.
-2.  **Impact & Metrics**: Look for quantifiable achievements (numbers, percentages, revenue). If they are missing, penalize the score.
-3.  **Relevance**: If a Job Description is provided, strictly evaluate how well the resume matches the requirements. If not, evaluate based on general industry standards for the apparent role.
-4.  **Clarity & Brevity**: Is the resume concise and easy to scan?
-
-Please provide a comprehensive analysis in the following JSON format:
+    // ---- AI MODE (Gemini API) ----
+    const prompt = `You are an ATS evaluator. Return ONLY JSON in this format:
 {
-    "atsScore": <number between 0-100. Be strict. 85+ should be exceptional. Average resumes should be 50-70.>,
-    "summary": "<A critical 2-3 sentence summary of the candidate's suitability. Highlight the biggest flaw and the biggest strength.>",
-    "skillGaps": "<Specific technical or soft skills missing from the resume that are crucial for the role. Be specific.>",
-    "strengths": "<List the top 3 strongest points of the resume.>",
-    "recommendations": "<Provide 3-5 concrete, actionable steps to improve the resume. Focus on high-impact changes like adding metrics or restructuring sections.>"
+ "atsScore": number (strict, avg=55-70),
+ "summary": "brief critical summary",
+ "skillGaps": "missing skills",
+ "strengths": "top improvements",
+ "recommendations": "fixes required",
+ "jobFit": "% match from job description"
 }
 
-Respond ONLY with valid JSON, no additional text.`;
+Resume:
+${resumeText}
 
-                try {
-                    // Using gemini-2.5-flash-lite model
-                    const geminiResponse = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-                        {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{ parts: [{ text: prompt }] }]
-                            })
-                        }
-                    );
+Job Description:
+${jobDescription || "None provided"}
+`;
 
-                    if (!geminiResponse.ok) {
-                        const errorText = await geminiResponse.text();
-                        console.error(`Gemini API request failed: ${errorText}`);
-                        console.log('⚠️  API call failed. Falling back to Local Mode.');
-
-                        // Fallback to local analysis
-                        const analysis = analyzeLocal(resumeText);
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ analysis }));
-                        return;
-                    }
-
-                    const geminiData = await geminiResponse.json();
-                    const responseText = geminiData.candidates[0].content.parts[0].text;
-
-                    let analysis;
-                    try {
-                        analysis = JSON.parse(responseText);
-                    } catch (e) {
-                        const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) ||
-                            responseText.match(/```\n([\s\S]*?)\n```/) ||
-                            responseText.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                            analysis = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-                        } else {
-                            throw new Error('Could not parse AI response');
-                        }
-                    }
-
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ analysis }));
-                } catch (apiError) {
-                    console.error('API Error:', apiError);
-                    console.log('⚠️  API execution failed. Falling back to Local Mode.');
-                    try {
-                        const analysis = analyzeLocal(resumeText);
-                        if (!res.headersSent) {
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ analysis }));
-                        }
-                    } catch (fallbackError) {
-                        console.error('Fallback Error:', fallbackError);
-                        if (!res.headersSent) {
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ error: 'Analysis failed' }));
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                if (!res.headersSent) {
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Failed to analyze resume', details: error.message }));
-                }
+    try {
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${API_KEY}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             }
-        });
-        return;
+        );
+
+        const data = await response.json();
+        let raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        // Safe JSON Parser — even if Gemini adds markdown
+        raw = raw?.replace(/```json|```/g, "");
+        const finalJSON = JSON.parse(raw);
+
+        return res.json({ analysis: finalJSON });
+    } catch (err) {
+        return res.json({ analysis: localATS(resumeText, jobDescription) });
     }
-
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
 });
 
-server.listen(PORT, () => {
-    console.log(`\n🚀 AI Resume Analyzer is running!`);
-    console.log(`\n📱 Open in your browser: http://localhost:${PORT}`);
-    console.log(`\n✨ Upload a PDF resume to get started!\n`);
-});
+// Start server
+app.listen(PORT, () =>
+    console.log(`\n🚀 AI Resume Analyzer running → http://localhost:${PORT}\n`)
+);
